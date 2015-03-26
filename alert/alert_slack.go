@@ -1,10 +1,12 @@
-package main
+package alert
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
+
+	"redalert/common"
 )
 
 type SlackWebhook struct {
@@ -14,12 +16,12 @@ type SlackWebhook struct {
 	iconEmoji string
 }
 
-func NewSlackWebhook(config *SlackConfig) SlackWebhook {
+func NewSlackWebhook() SlackWebhook {
 	return SlackWebhook{
-		url:       config.WebhookURL,
-		channel:   config.Channel,
-		username:  config.Username,
-		iconEmoji: config.IconEmoji,
+		url:       config.Slack.WebhookURL,
+		channel:   config.Slack.Channel,
+		username:  config.Slack.Username,
+		iconEmoji: config.Slack.IconEmoji,
 	}
 }
 
@@ -27,7 +29,7 @@ func (a SlackWebhook) Name() string {
 	return "SlackWebhook"
 }
 
-func (a SlackWebhook) Trigger(event *Event) error {
+func (a SlackWebhook) Trigger(alertPackage *AlertPackage) error {
 
 	var payloadChannel string
 	var payloadUsername string
@@ -54,7 +56,7 @@ func (a SlackWebhook) Trigger(event *Event) error {
 	message := SlackPayload{
 		Channel:   payloadChannel,
 		Username:  payloadUsername,
-		Text:      event.ShortMessage(),
+		Text:      alertPackage.Message,
 		Parse:     "full",
 		IconEmoji: payloadIconEmoji,
 	}
@@ -73,7 +75,7 @@ func (a SlackWebhook) Trigger(event *Event) error {
 		return errors.New("Not OK")
 	}
 
-	event.Server.log.Println(white, "Slack alert successfully triggered.", reset)
+	alertPackage.AlertLogger.Println(common.White, "Slack alert successfully triggered.", common.Reset)
 	return nil
 }
 

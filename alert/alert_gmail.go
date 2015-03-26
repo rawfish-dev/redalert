@@ -1,8 +1,10 @@
-package main
+package alert
 
 import (
 	"net/smtp"
 	"strings"
+
+	"redalert/common"
 )
 
 type Gmail struct {
@@ -11,11 +13,11 @@ type Gmail struct {
 	notificationAddresses []string
 }
 
-func NewGmail(config *GmailConfig) Gmail {
+func NewGmail() Gmail {
 	return Gmail{
-		user: config.User,
-		pass: config.Pass,
-		notificationAddresses: config.NotificationAddresses,
+		user: config.Gmail.User,
+		pass: config.Gmail.Pass,
+		notificationAddresses: config.Gmail.NotificationAddresses,
 	}
 }
 
@@ -23,11 +25,11 @@ func (a Gmail) Name() string {
 	return "Gmail"
 }
 
-func (a Gmail) Trigger(event *Event) error {
+func (a Gmail) Trigger(alertPackage *AlertPackage) error {
 
 	body := "To: " + strings.Join(a.notificationAddresses, ",") +
-		"\r\nSubject: " + event.ShortMessage() +
-		"\r\n\r\n" + event.ShortMessage()
+		"\r\nSubject: " + alertPackage.Message +
+		"\r\n\r\n" + alertPackage.Message
 
 	auth := smtp.PlainAuth("", a.user, a.pass, "smtp.gmail.com")
 	err := smtp.SendMail("smtp.gmail.com:587", auth, a.user,
@@ -36,6 +38,6 @@ func (a Gmail) Trigger(event *Event) error {
 		return err
 	}
 
-	event.Server.log.Println(white, "Gmail alert successfully triggered.", reset)
+	alertPackage.AlertLogger.Println(common.White, "Gmail alert successfully triggered.", common.Reset)
 	return nil
 }

@@ -1,10 +1,12 @@
-package main
+package alert
 
 import (
 	"errors"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"redalert/common"
 )
 
 type Twilio struct {
@@ -14,12 +16,12 @@ type Twilio struct {
 	twilioNumber string
 }
 
-func NewTwilio(config *TwilioConfig) Twilio {
+func NewTwilio() Twilio {
 	return Twilio{
-		accountSid:   config.AccountSID,
-		authToken:    config.AuthToken,
-		phoneNumbers: config.NotificationNumbers,
-		twilioNumber: config.TwilioNumber,
+		accountSid:   config.Twilio.AccountSID,
+		authToken:    config.Twilio.AuthToken,
+		phoneNumbers: config.Twilio.NotificationNumbers,
+		twilioNumber: config.Twilio.TwilioNumber,
 	}
 }
 
@@ -27,16 +29,16 @@ func (a Twilio) Name() string {
 	return "Twilio"
 }
 
-func (a Twilio) Trigger(event *Event) (err error) {
+func (a Twilio) Trigger(alertPackage *AlertPackage) (err error) {
 
-	msg := event.ShortMessage()
+	msg := alertPackage.Message
 	for _, num := range a.phoneNumbers {
 		err = SendSMS(a.accountSid, a.authToken, num, a.twilioNumber, msg)
 		if err != nil {
 			return
 		}
 	}
-	event.Server.log.Println(white, "Twilio alert successfully triggered.", reset)
+	alertPackage.AlertLogger.Println(common.White, "Twilio alert successfully triggered.", common.Reset)
 	return nil
 
 }

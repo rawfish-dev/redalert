@@ -1,22 +1,14 @@
-package main
+package alert
 
 import (
 	"encoding/json"
 	"io/ioutil"
 )
 
-type Config struct {
-	Servers []ServerConfig `json:"servers"`
-	Gmail   *GmailConfig   `json:"gmail,omitempty"`
-	Slack   *SlackConfig   `json:"slack,omitempty"`
-	Twilio  *TwilioConfig  `json:"twilio,omitempty"`
-}
-
-type ServerConfig struct {
-	Name     string   `json:"name"`
-	Address  string   `json:"address"`
-	Interval int      `json:"interval"`
-	Alerts   []string `json:"alerts"`
+type AlertConfig struct {
+	Gmail  *GmailConfig  `json:"gmail,omitempty"`
+	Slack  *SlackConfig  `json:"slack,omitempty"`
+	Twilio *TwilioConfig `json:"twilio,omitempty"`
 }
 
 type GmailConfig struct {
@@ -39,12 +31,12 @@ type TwilioConfig struct {
 	NotificationNumbers []string `json:"notification_numbers"`
 }
 
-func ReadConfigFile() (*Config, error) {
-	file, err := ioutil.ReadFile("config.json")
+func ReadConfigFile() (*AlertConfig, error) {
+	file, err := ioutil.ReadFile("alert/config.json")
 	if err != nil {
 		return nil, err
 	}
-	var config Config
+	var config AlertConfig
 	err = json.Unmarshal(file, &config)
 	return &config, err
 }

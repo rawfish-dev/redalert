@@ -1,0 +1,19 @@
+{
+   "gmail": {
+      "user": "",
+      "pass": "",
+      "notification_addresses": []
+   },
+   "slack": {
+      "webhook_url": "",
+      "channel": "#general",
+      "username": "redalert",
+      "icon_emoji": ":rocket:"
+   },
+   "twilio": {
+      "account_sid": "",
+      "auth_token": "",
+      "twilio_number": "",
+      "notification_numbers": []
+   }
+}

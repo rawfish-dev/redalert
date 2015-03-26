@@ -1,8 +1,10 @@
-package main
+package alert
 
 import (
 	"log"
 	"os"
+
+	"redalert/common"
 )
 
 type StandardError struct {
@@ -19,8 +21,8 @@ func (a StandardError) Name() string {
 	return "StandardError"
 }
 
-func (a StandardError) Trigger(event *Event) error {
-	a.log.Println(event.ShortMessage())
-	event.Server.log.Println(white, "Stderr alert successfully triggered.", reset)
+func (a StandardError) Trigger(alertPackage *AlertPackage) error {
+	a.log.Println(alertPackage.Message)
+	alertPackage.AlertLogger.Println(common.White, "Stderr alert successfully triggered.", common.Reset)
 	return nil
 }
