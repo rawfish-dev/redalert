@@ -29,7 +29,6 @@ func (s *Service) initialize() {
 		for {
 			select {
 			case newEvent := <-eventsChannel:
-				s.serviceLog.Printf("Received event: %+v\n", newEvent.Server.GetServerWatcher())
 				s.triggerAlert(newEvent)
 			}
 		}

@@ -1,4 +1,4 @@
 redalert
 notes
-config.json
+*/**/config.json
 *.rice-box.go

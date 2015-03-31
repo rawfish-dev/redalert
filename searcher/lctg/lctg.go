@@ -71,8 +71,6 @@ func (l *LCTGSearcher) Healthcheck() (time.Duration, error) {
 		return 0, errors.New("redalert search: failed parsing url in http.NewRequest " + err.Error())
 	}
 
-	// panic(fmt.Sprintf("LCTG Request: %+v", requestBody.String()))
-
 	// Add appropriate headers
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
@@ -97,14 +95,18 @@ func (l *LCTGSearcher) Healthcheck() (time.Duration, error) {
 		return latency, errors.New("redalert search: unable to read search response " + err.Error())
 	}
 
-	// Validate response body is well formed
+	unwrappedSearchResponse, err := unwrapSearchResponse(responseBody)
+	unwrappedSearchResponse.processAndSave(latency)
 
-	l.GetServerWatcher().Log.Printf("Status: %v", response.StatusCode)
-	l.GetServerWatcher().Log.Printf("Response: %v", string(responseBody))
+	if err != nil {
+		return latency, errors.New("redalert search: search response was malformed " + err.Error())
+	}
+
+	if !unwrappedSearchResponse.ReturnStatus.Success {
+		return latency, errors.New("redalert search: search failed due to %v" + unwrappedSearchResponse.ReturnStatus.Exception)
+	}
 
 	l.GetServerWatcher().Log.Println(common.Green, "OK", common.Reset, l.GetServerDetails().Name)
-
-	// panic(fmt.Sprintf("LCTG Response: %+v", string(responseBody)))
 
 	return latency, nil
 }
