@@ -1,30 +1,32 @@
-package server
+package common
 
 import (
 	"log"
-	"sync"
 	"time"
-
-	"redalert/common"
 )
 
-type CheckableServer interface {
-	GetServerDetails() ServerDetails
-	GetServerWatcher() ServerWatcher
-	Healthcheck() (time.Duration, error)
+type Server struct {
+	Name      string
+	LastEvent *Event
 }
 
 type ServerDetails struct {
 	Name     string
 	Address  string
 	Interval int
-	wg       sync.WaitGroup
 }
 
 type ServerWatcher struct {
 	Log       *log.Logger
-	failCount int
+	FailCount int
 	LastEvent *Event
+}
+
+type CheckableServer interface {
+	GetServerDetails() ServerDetails
+	GetServerWatcher() *ServerWatcher
+	IncrFailCount()
+	Healthcheck() (time.Duration, error)
 }
 
 func SchedulePing(checkableServer CheckableServer, eventChan chan *Event, stopChan chan bool) {
@@ -47,7 +49,7 @@ func SchedulePing(checkableServer CheckableServer, eventChan chan *Event, stopCh
 
 			if err != nil {
 
-				serverWatcher.Log.Println(common.Red, "ERROR: ", err, common.Reset)
+				serverWatcher.Log.Println(Red, "ERROR: ", err, Reset)
 
 				// before sending an alert, pause 5 seconds & retry
 				// prevent alerts from occaisional errors ('no such host' / 'i/o timeout') on cloud providers
@@ -63,9 +65,9 @@ func SchedulePing(checkableServer CheckableServer, eventChan chan *Event, stopCh
 
 					eventChan <- event
 
-					serverWatcher.IncrFailCount()
-					if serverWatcher.failCount > 0 {
-						delay = time.Second * time.Duration(serverWatcher.failCount*serverDetails.Interval)
+					checkableServer.IncrFailCount()
+					if serverWatcher.FailCount > 0 {
+						delay = time.Second * time.Duration(serverWatcher.FailCount*serverDetails.Interval)
 					}
 
 				} else {
@@ -73,7 +75,7 @@ func SchedulePing(checkableServer CheckableServer, eventChan chan *Event, stopCh
 					// re-ping succeeds (likely false positive)
 
 					delay = originalDelay
-					serverWatcher.failCount = 0
+					serverWatcher.FailCount = 0
 				}
 
 			} else {
@@ -82,12 +84,12 @@ func SchedulePing(checkableServer CheckableServer, eventChan chan *Event, stopCh
 				isRedalertRecovery := serverWatcher.LastEvent != nil && serverWatcher.LastEvent.isRedAlert()
 				serverWatcher.LastEvent = event
 				if isRedalertRecovery {
-					serverWatcher.Log.Println(common.Green, "RECOVERY: ", common.Reset, serverDetails.Name)
+					serverWatcher.Log.Println(Green, "RECOVERY: ", Reset, serverDetails.Name)
 					eventChan <- event
 				}
 
 				delay = originalDelay
-				serverWatcher.failCount = 0
+				serverWatcher.FailCount = 0
 
 			}
 
@@ -99,8 +101,4 @@ func SchedulePing(checkableServer CheckableServer, eventChan chan *Event, stopCh
 		}
 	}()
 
-}
-
-func (s *ServerWatcher) IncrFailCount() {
-	s.failCount++
 }

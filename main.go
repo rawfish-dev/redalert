@@ -6,16 +6,17 @@ import (
 	"net/http"
 	"os"
 
-	"redalert/pinger"
+	"redalert/alert"
+	"redalert/common"
+	// "redalert/pinger"
+	"redalert/searcher"
 	"text/template"
-	// "redalert/searcher"
-	"redalert/server"
 
 	"github.com/GeertJohan/go.rice"
 )
 
 type DashboardInfo struct {
-	Servers []server.CheckableServer
+	Servers []common.Server
 }
 
 func dashboardHandler(c *appCtx, w http.ResponseWriter, r *http.Request) {
@@ -47,7 +48,14 @@ func dashboardHandler(c *appCtx, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	info := &DashboardInfo{Servers: c.service.servers}
+	var transformedServers []common.Server
+	for _, individualCheckableServer := range c.service.servers {
+		transformedServers = append(transformedServers, common.Server{
+			Name:      individualCheckableServer.GetServerDetails().Name,
+			LastEvent: individualCheckableServer.GetServerWatcher().LastEvent,
+		})
+	}
+	info := &DashboardInfo{Servers: transformedServers}
 
 	if err := tmplMessage.Execute(w, info); err != nil {
 		log.Println(err.Error())
@@ -76,18 +84,20 @@ func getPort() string {
 }
 
 func main() {
-	service := &Service{}
+	service := &Service{
+		alerts: alert.RegisteredAlerts,
+	}
 	service.initialize()
 
 	// Pick up all pingers
-	for _, individualPinger := range pinger.Online {
-		service.AddServer(individualPinger)
-	}
-
-	// // Pick up all searchers
-	// for _, individualSearcher := range searcher.Online {
-	// service.AddServer(individualSearcher)
+	// for _, individualPinger := range pinger.Online {
+	// 	service.AddServer(individualPinger)
 	// }
+
+	// Pick up all searchers
+	for _, individualSearcher := range searcher.Online {
+		service.AddServer(individualSearcher)
+	}
 
 	service.Start()
 	context := &appCtx{

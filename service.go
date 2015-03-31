@@ -8,21 +8,20 @@ import (
 
 	"redalert/alert"
 	"redalert/common"
-	"redalert/server"
 )
 
 type Service struct {
-	servers    []server.CheckableServer
-	alerts     map[string]alert.Alert
+	servers    []common.CheckableServer
+	alerts     map[alert.AlertType]alert.Alert
 	serviceLog *log.Logger
 	wg         sync.WaitGroup
 }
 
 // Create channel to hold events to trigger alerts, buffering to one for testing
-var eventsChannel chan *server.Event
+var eventsChannel chan *common.Event
 
 func (s *Service) initialize() {
-	eventsChannel = make(chan *server.Event)
+	eventsChannel = make(chan *common.Event)
 	s.serviceLog = log.New(os.Stdout, "Service ", log.Ldate|log.Ltime)
 
 	// Start event listening loop
@@ -30,14 +29,14 @@ func (s *Service) initialize() {
 		for {
 			select {
 			case newEvent := <-eventsChannel:
-				s.serviceLog.Printf("Received event: %+v\n", newEvent)
+				s.serviceLog.Printf("Received event: %+v\n", newEvent.Server.GetServerWatcher())
 				s.triggerAlert(newEvent)
 			}
 		}
 	}()
 }
 
-func (s *Service) AddServer(checkableServer server.CheckableServer) {
+func (s *Service) AddServer(checkableServer common.CheckableServer) {
 	s.servers = append(s.servers, checkableServer)
 }
 
@@ -46,8 +45,8 @@ func (s *Service) Start() {
 	// use this to keep the service running, even if no monitoring is occuring
 	s.wg.Add(1)
 
-	for _, server := range s.servers {
-		go s.Monitor(server)
+	for serverIndex, _ := range s.servers {
+		go s.Monitor(s.servers[serverIndex])
 	}
 
 	c := make(chan os.Signal, 1)
@@ -60,12 +59,12 @@ func (s *Service) Start() {
 
 }
 
-func (s *Service) Monitor(checkableServer server.CheckableServer) {
+func (s *Service) Monitor(checkableServer common.CheckableServer) {
 
 	s.wg.Add(1)
 
 	stopScheduler := make(chan bool)
-	server.SchedulePing(checkableServer, eventsChannel, stopScheduler)
+	common.SchedulePing(checkableServer, eventsChannel, stopScheduler)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt)
@@ -82,7 +81,7 @@ func (s *Service) Monitor(checkableServer server.CheckableServer) {
 
 }
 
-func (s *Service) triggerAlert(event *server.Event) {
+func (s *Service) triggerAlert(event *common.Event) {
 
 	go func() {
 

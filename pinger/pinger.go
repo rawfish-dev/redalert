@@ -12,12 +12,11 @@ import (
 	"time"
 
 	"redalert/common"
-	"redalert/server"
 )
 
 type Pinger struct {
-	server.ServerDetails
-	server.ServerWatcher
+	common.ServerDetails
+	*common.ServerWatcher
 }
 
 var pingerClient = http.Client{
@@ -35,23 +34,23 @@ func init() {
 
 	for _, individualPinger := range config.TargetServers {
 		Online = append(Online, Pinger{
-			ServerDetails: server.ServerDetails{
+			ServerDetails: common.ServerDetails{
 				Name:     individualPinger.Name,
 				Address:  individualPinger.Address,
 				Interval: individualPinger.Interval,
 			},
-			ServerWatcher: server.ServerWatcher{
+			ServerWatcher: &common.ServerWatcher{
 				Log: log.New(os.Stdout, individualPinger.Name+" ", log.Ldate|log.Ltime),
 			},
 		})
 	}
 }
 
-func (p Pinger) GetServerDetails() server.ServerDetails {
+func (p Pinger) GetServerDetails() common.ServerDetails {
 	return p.ServerDetails
 }
 
-func (p Pinger) GetServerWatcher() server.ServerWatcher {
+func (p Pinger) GetServerWatcher() *common.ServerWatcher {
 	return p.ServerWatcher
 }
 
@@ -85,4 +84,8 @@ func (p Pinger) Healthcheck() (time.Duration, error) {
 	p.GetServerWatcher().Log.Println(common.Green, "OK", common.Reset, p.GetServerDetails().Name)
 
 	return latency, nil
+}
+
+func (p Pinger) IncrFailCount() {
+	p.ServerWatcher.FailCount++
 }
